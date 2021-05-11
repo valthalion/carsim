@@ -27,6 +27,8 @@ gas_price = 1.3  # Eur/l
 
 # - Electricity
 
+charging_efficiency = 0.95  # fraction
+
 power = 5.0  # KW
 
 quick_charger_use = 0.0  # mileage_highway  # overestimated, initial load on own charger
@@ -91,6 +93,8 @@ st.sidebar.write(f'Highway fraction: {mileage_highway:.2f}')
 st.sidebar.write(f'Road fraction: {mileage_road:.2f}')
 st.sidebar.write(f'City fraction: {mileage_city:.2f}')
 
+charging_efficiency = st.sidebar.slider('Charging Efficiency (%)', 0, 100, int(charging_efficiency * 100), 1, '%d%%') / 100
+
 
 
 st.title('Comparison of Gas and Charging Costs')
@@ -148,7 +152,7 @@ def km_to_litres(km):
 def km_to_kwh(km):
     return km * 0.01 * (elec_mileage_city * mileage_city +
                         elec_mileage_road * mileage_road +
-                        elec_mileage_highway * mileage_highway)
+                        elec_mileage_highway * mileage_highway) / charging_efficiency
 
 
 def gas_cost(litres):
