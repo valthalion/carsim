@@ -1,18 +1,20 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import streamlit as st
 
+plt.style.use('dark_background')
 
-# Scenario
+# Default Scenario
 
 # - Gas car features
-gas_mileage_highway = 5  # l/100Km
+gas_mileage_highway = 5.0  # l/100Km
 gas_mileage_road = 4.5  # l/100Km
-gas_mileage_city = 7  # l/100Km
+gas_mileage_city = 7.0  # l/100Km
 
 # - Electric car features
-elec_mileage_highway = 20  # KW/100Km
+elec_mileage_highway = 20.0  # KW/100Km
 elec_mileage_road = 17.5  # KW/100Km
-elec_mileage_city = 15  # KW/100Km
+elec_mileage_city = 15.0  # KW/100Km
 
 # - Distances
 total_mileage = 20_000  # Km/year
@@ -25,19 +27,19 @@ gas_price = 1.3  # Eur/l
 
 # - Electricity
 
-power = 5  # KW
+power = 5.0  # KW
 
-quick_charger_use = 0  # mileage_highway  # overestimated, initial load on own charger
-own_charger_use = 1 - quick_charger_use
+quick_charger_use = 0.0  # mileage_highway  # overestimated, initial load on own charger
+own_charger_use = 1.0 - quick_charger_use
 
-valley_fraction = 1  # fraction of all charge during valley period
-non_valley_fraction = 1 - valley_fraction
+valley_fraction = 1.0  # fraction of all charge during valley period
+non_valley_fraction = 1.0 - valley_fraction
 
 quick_charger_price = 0.5  # Eur/KWh
 
 # -- Fixed cost, public parking (E1)
 
-e1_power_term = 0  # Eur/KW/year
+e1_power_term = 0.0  # Eur/KW/year
 e1_kwh_price = 0.125  # Eur/KWh
 
 # -- Fixed cost, EDP (E2)
@@ -62,6 +64,77 @@ e4_valley_kwh_price = 0.038156  # Eur/KWh
 e5_power_term = 5.06793266710063 * 12  # Eur/KW/year
 e5_kwh_price = 0.20395986657156634  # Eur/KWh
 e5_free_hours = 50 * 12  # h/year
+
+# ***
+
+
+st.sidebar.title('Configuration')
+
+st.sidebar.header('Gas car data')
+gas_mileage_highway = st.sidebar.slider('Highway Mileage (l/100Km)', 0.0, 20.0, gas_mileage_highway, 0.1)
+gas_mileage_road = st.sidebar.slider('Road Mileage (l/100Km)', 0.0, 20.0, gas_mileage_road, 0.1)
+gas_mileage_city = st.sidebar.slider('City Mileage (l/100Km)', 0.0, 20.0, gas_mileage_city, 0.1)
+
+st.sidebar.header('Electric car data')
+elec_mileage_highway = st.sidebar.slider('Highway Mileage (KW/100Km)', 0.0, 30.0, elec_mileage_highway, 0.5)
+elec_mileage_road = st.sidebar.slider('Road Mileage (KW/100Km)', 0.0, 30.0, elec_mileage_road, 0.5)
+elec_mileage_city = st.sidebar.slider('City Mileage (KW/100Km)', 0.0, 30.0, elec_mileage_city, 0.5)
+
+st.sidebar.header('Distances')
+total_mileage = st.sidebar.slider('Total mileage (Km/year)', 0, 100_000, total_mileage, 5_000)
+mileage_highway, mileage_highway_road = st.sidebar.slider('Highway / Road / City fractions',
+                                                          0.0, 1.0, (mileage_highway, mileage_highway + mileage_road), 0.05)
+
+mileage_road = mileage_highway_road - mileage_highway
+mileage_city = 1 - mileage_highway_road
+st.sidebar.write(f'Highway fraction: {mileage_highway:.2f}')
+st.sidebar.write(f'Road fraction: {mileage_road:.2f}')
+st.sidebar.write(f'City fraction: {mileage_city:.2f}')
+
+
+
+st.title('Comparison of Gas and Charging Costs')
+expand = st.checkbox('Expand Scenario')
+
+if expand:
+    st.header('Gas Price')
+    gas_price = st.number_input('Gas price (Eur/l)', 0.0, 5.0, gas_price, 0.01, '%.2f')
+
+
+    st.header('Electricity')
+
+    quick_charger_price = st.number_input('Quick Charger Price (Eur/KWh)', 0.0, 1.0, quick_charger_price, 0.01, '%.3f')
+    quick_charger_use = st.slider('Quick Charger Use (fraction)', 0.0, 1.0, quick_charger_use, 0.05)
+    own_charger_use = 1 - quick_charger_use
+    st.write(f'Own Charger Use (fraction): {own_charger_use}')
+
+    power = st.slider('Contracted Power (KW)', 2.0, 10.0, power, 0.1)
+    valley_fraction = st.slider('Fraction of all charge during valley period', 0.0, 1.0, valley_fraction, 0.05)
+    non_valley_fraction = 1 - valley_fraction
+    st.write(f'Fraction of all charge during non-valley period: {non_valley_fraction}')
+
+    st.subheader('Public Parking Rate')  # E1
+    e1_power_term = st.number_input('Power Term (Eur/KW/year)', 0.0, 200.0, e1_power_term, 0.01)
+    e1_kwh_price = st.number_input('Energy Price (Eur/KWh)', 0.0, 1.0, e1_kwh_price, 0.001, '%.3f')
+
+    st.subheader('EDP Flat Rate')  # E2
+    e2_power_term = st.number_input('Power Term (Eur/KW/year)', 0.0, 200.0, e2_power_term, 0.01, '%.6f')
+    e2_kwh_price = st.number_input('Energy Price (Eur/KWh)', 0.0, 1.0, e2_kwh_price, 0.001, '%.6f')
+
+    st.subheader('EDP EV Rate')  # E3
+    e3_power_term = st.number_input('Power Term (Eur/KW/year)', 0.0, 200.0, e3_power_term, 0.01)
+    e3_kwh_price = st.number_input('Energy Price (Eur/KWh)', 0.0, 1.0, e3_kwh_price, 0.001, '%.6f')
+    e3_valley_kwh_price = st.number_input('Valley Energy Price (Eur/KWh)', 0.0, 1.0, e3_valley_kwh_price, 0.001, '%.6f')
+
+    st.subheader('Iberdrola EV Rate')  # E4
+    e4_power_term = st.number_input('Power Term (Eur/KW/year)', 0.0, 200.0, e4_power_term, 0.01)
+    e4_kwh_price = st.number_input('Energy Price (Eur/KWh)', 0.0, 1.0, e4_kwh_price, 0.001, '%.6f')
+    e4_valley_kwh_price = st.number_input('Valley Energy Price (Eur/KWh)', 0.0, 1.0, e4_valley_kwh_price, 0.001, '%.6f')
+
+    st.subheader('Endesa H50 Rate')  # E5
+    e5_power_term = st.number_input('Power Term (Eur/KW/year)', 0.0, 200.0, e5_power_term, 0.001, '%.6f')
+    e5_kwh_price = st.number_input('Energy Price (Eur/KWh)', 0.0, 1.0, e5_kwh_price, 0.001, '%.6f')
+    e5_free_hours = st.number_input('Monthly free hours', 0, 100, e5_free_hours // 12, 1) * 12
 
 
 # Cost_functions
@@ -118,7 +191,7 @@ e4_cost = valley_cost(e4_power_term, e4_kwh_price, e4_valley_kwh_price)
 e5_cost = free_hours_cost(e5_power_term, e5_kwh_price, e5_free_hours)
 
 
-km = np.linspace(0, total_mileage, 201)
+km = np.linspace(0, total_mileage, (total_mileage // 100) + 1)
 litres = km_to_litres(km)
 kwh = km_to_kwh(km)
 
@@ -129,6 +202,7 @@ e3 = e3_cost(kwh)
 e4 = e4_cost(kwh)
 e5 = e5_cost(kwh)
 
+fig = plt.figure()
 plt.plot(km, gas, label='Gas')
 plt.plot(km, e1, label='Parking')
 plt.plot(km, e2, label='EDP flat')
@@ -137,6 +211,25 @@ plt.plot(km, e4, label='Iberdrola EV')
 plt.plot(km, e5, label='Endesa H50')
 plt.title('Yearly cost of electricity (and gas) with distance driven')
 plt.xlabel('Distance driven (Km/year)')
-plt.ylabel('Yearly cost')
+plt.ylabel('Yearly cost (Eur/year)')
 plt.legend()
-plt.show()
+st.pyplot(fig)
+
+options = {'Public Parking': e1,
+           'EDP Flat Rate': e2,
+           'EDP EV Rate': e3,
+           'Iberdrola EV Rate': e4,
+           'Endesa H50 Rate': e5}
+selected = st.multiselect('Chosen Option(s)', list(options.keys()))
+if selected:
+    fig2 = plt.figure()
+    plt.plot(km, np.zeros_like(km), 'y--')
+    for selected_option in selected:
+        selected_cost = options[selected_option]
+        plt.plot(km, gas - selected_cost, label=selected_option)
+    plt.title(f'Yearly savings with {selected}')
+    plt.xlabel('Distance driven (Km/year)')
+    plt.ylabel('Yearly savings (Eur/year)')
+    if len(selected) > 1:
+        plt.legend()
+    st.pyplot(fig2)
