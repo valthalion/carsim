@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+from plotnine import *
 import streamlit as st
 
-plt.style.use('dark_background')
 
 # Default Scenario
 
@@ -206,34 +207,68 @@ e3 = e3_cost(kwh)
 e4 = e4_cost(kwh)
 e5 = e5_cost(kwh)
 
-fig = plt.figure()
-plt.plot(km, gas, label='Gas')
-plt.plot(km, e1, label='Parking')
-plt.plot(km, e2, label='EDP flat')
-plt.plot(km, e3, label='EDP EV')
-plt.plot(km, e4, label='Iberdrola EV')
-plt.plot(km, e5, label='Endesa H50')
-plt.title('Yearly cost of electricity (and gas) with distance driven')
-plt.xlabel('Distance driven (Km/year)')
-plt.ylabel('Yearly cost (Eur/year)')
-plt.legend()
-st.pyplot(fig)
+xkcd = st.checkbox('Use XKCD theme')
+light_text = element_text(color='white')
+light_line = element_line(color='lightgray')
+dark_background = element_rect(fill='black')
+if xkcd:
+    plt.style.use('classic')
+    theme_set(theme_xkcd())
+else:
+    plt.style.use('dark_background')
+    theme_set(theme_dark() +
+              theme(text=light_text, axis_line=light_line, axis_ticks=light_line,
+                    panel_grid_major=light_line, legend_background=dark_background,
+                    panel_background=dark_background)
+    )
 
-options = {'Public Parking': e1,
-           'EDP Flat Rate': e2,
-           'EDP EV Rate': e3,
-           'Iberdrola EV Rate': e4,
-           'Endesa H50 Rate': e5}
+cost_data = pd.concat(
+    [
+        pd.DataFrame.from_dict({'mileage': km, 'rate': 'Gas', 'cost': gas}),
+        pd.DataFrame.from_dict({'mileage': km, 'rate': 'Parking', 'cost': e1}),
+        pd.DataFrame.from_dict({'mileage': km, 'rate': 'EDP Flat', 'cost': e2}),
+        pd.DataFrame.from_dict({'mileage': km, 'rate': 'EDP EV', 'cost': e3}),
+        pd.DataFrame.from_dict({'mileage': km, 'rate': 'Iberdrola EV', 'cost': e4}),
+        pd.DataFrame.from_dict({'mileage': km, 'rate': 'Endesa 50H', 'cost': e5})
+    ],
+    ignore_index=True
+)
+
+fig = (
+    ggplot(cost_data) +
+    aes(x='mileage', y='cost', color='rate', group='rate') +
+    geom_line(size=1) +
+    labs(title='Yearly cost of electricity (and gas) with distance driven', color='Rate') +
+        xlab('Distance driven (Km/year)') +
+        ylab('Yearly cost (Eur/year)')
+)
+st.pyplot(ggplot.draw(fig))
+
+
+options = {'Public Parking': e1, 'EDP Flat Rate': e2, 'EDP EV Rate': e3,
+           'Iberdrola EV Rate': e4, 'Endesa H50 Rate': e5}
 selected = st.multiselect('Chosen Option(s)', list(options.keys()))
 if selected:
-    fig2 = plt.figure()
-    plt.plot(km, np.zeros_like(km), 'y--')
-    for selected_option in selected:
-        selected_cost = options[selected_option]
-        plt.plot(km, gas - selected_cost, label=selected_option)
-    plt.title(f'Yearly savings with {selected}')
-    plt.xlabel('Distance driven (Km/year)')
-    plt.ylabel('Yearly savings (Eur/year)')
-    if len(selected) > 1:
-        plt.legend()
-    st.pyplot(fig2)
+    diff_data = pd.concat(
+        [pd.DataFrame.from_dict({'mileage': km, 'rate': option, 'diff': gas - options[option]})
+         for option in selected],
+        ignore_index=True
+    )
+
+    if len(selected) == 1:
+        chart_title = f'Yearly savings with {selected[0]}'
+    else:
+        chart_title = 'Yearly savings with selected rates'
+
+    fig2 = (
+        ggplot(diff_data) +
+        aes(x='mileage', y='diff', color='rate', group='rate') +
+        geom_line(size=1) +
+        labs(title=chart_title, color='Rate') +
+        xlab('Distance driven (Km/year)') +
+        ylab('Yearly savings (Eur/year)') +
+        geom_hline(yintercept=0, linetype='dashed', color='green')
+    )
+    if len(selected) == 1:
+        fig2 += theme(legend_position='none')
+    st.pyplot(ggplot.draw(fig2))
