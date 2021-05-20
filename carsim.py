@@ -40,7 +40,7 @@ quick_charger_price = 0.5  # Eur/KWh
 # -- Fixed cost, public parking (E1)
 
 e1_power_term = 0.0  # Eur/KW/year
-e1_kwh_price = 0.125  # Eur/KWh
+e1_kwh_price = 0.25  # Eur/KWh
 
 # -- Fixed cost, EDP (E2)
 
