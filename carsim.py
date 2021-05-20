@@ -20,6 +20,15 @@ mileage_highway = 0.15  # fraction
 mileage_road = 0.45  # fraction
 mileage_city = 0.4  # fraction
 
+# - Calculated average mileages
+
+avg_gas_mileage = (gas_mileage_city * mileage_city +
+                   gas_mileage_road * mileage_road +
+                   gas_mileage_highway * mileage_highway)
+avg_elec_mileage = (elec_mileage_city * mileage_city +
+                    elec_mileage_road * mileage_road +
+                    elec_mileage_highway * mileage_highway)
+
 # - Gas price
 gas_price = 1.3  # Eur/l
 
@@ -70,26 +79,42 @@ e5_free_hours = 50 * 12  # h/year
 
 st.sidebar.title('Configuration')
 
-st.sidebar.header('Gas car data')
-gas_mileage_highway = st.sidebar.slider('Highway Mileage (l/100Km)', 0.0, 20.0, gas_mileage_highway, 0.1)
-gas_mileage_road = st.sidebar.slider('Road Mileage (l/100Km)', 0.0, 20.0, gas_mileage_road, 0.1)
-gas_mileage_city = st.sidebar.slider('City Mileage (l/100Km)', 0.0, 20.0, gas_mileage_city, 0.1)
+simple_config = st.sidebar.checkbox('Simplified Configuration')
 
-st.sidebar.header('Electric car data')
-elec_mileage_highway = st.sidebar.slider('Highway Mileage (KW/100Km)', 0.0, 30.0, elec_mileage_highway, 0.5)
-elec_mileage_road = st.sidebar.slider('Road Mileage (KW/100Km)', 0.0, 30.0, elec_mileage_road, 0.5)
-elec_mileage_city = st.sidebar.slider('City Mileage (KW/100Km)', 0.0, 30.0, elec_mileage_city, 0.5)
+if simple_config:
+    avg_gas_mileage = st.sidebar.slider('Gas mileage (l/100Km)', 0.0, 10.0, avg_gas_mileage, 0.1, '%.1f')
+    avg_elec_mileage = st.sidebar.slider('Electric mileage (l/100Km)', 0.0, 25.0, avg_elec_mileage, 0.1, '%.1f')
+    total_mileage = st.sidebar.slider('Total mileage (Km/year)', 0, 100_000, total_mileage, 5_000)
+else:  # Full config
+    st.sidebar.header('Gas car data')
+    gas_mileage_highway = st.sidebar.slider('Highway Mileage (l/100Km)', 0.0, 20.0, gas_mileage_highway, 0.1)
+    gas_mileage_road = st.sidebar.slider('Road Mileage (l/100Km)', 0.0, 20.0, gas_mileage_road, 0.1)
+    gas_mileage_city = st.sidebar.slider('City Mileage (l/100Km)', 0.0, 20.0, gas_mileage_city, 0.1)
 
-st.sidebar.header('Distances')
-total_mileage = st.sidebar.slider('Total mileage (Km/year)', 0, 100_000, total_mileage, 5_000)
-mileage_highway, mileage_highway_road = st.sidebar.slider('Highway / Road / City fractions',
-                                                          0.0, 1.0, (mileage_highway, mileage_highway + mileage_road), 0.05)
+    st.sidebar.header('Electric car data')
+    elec_mileage_highway = st.sidebar.slider('Highway Mileage (KW/100Km)', 0.0, 30.0, elec_mileage_highway, 0.5)
+    elec_mileage_road = st.sidebar.slider('Road Mileage (KW/100Km)', 0.0, 30.0, elec_mileage_road, 0.5)
+    elec_mileage_city = st.sidebar.slider('City Mileage (KW/100Km)', 0.0, 30.0, elec_mileage_city, 0.5)
 
-mileage_road = mileage_highway_road - mileage_highway
-mileage_city = 1 - mileage_highway_road
-st.sidebar.write(f'Highway fraction: {mileage_highway:.2f}')
-st.sidebar.write(f'Road fraction: {mileage_road:.2f}')
-st.sidebar.write(f'City fraction: {mileage_city:.2f}')
+    st.sidebar.header('Distances')
+    total_mileage = st.sidebar.slider('Total mileage (Km/year)', 0, 100_000, total_mileage, 5_000)
+    mileage_highway, mileage_highway_road = st.sidebar.slider('Highway / Road / City fractions',
+                                                              0.0, 1.0, (mileage_highway, mileage_highway + mileage_road), 0.05)
+
+    mileage_road = mileage_highway_road - mileage_highway
+    mileage_city = 1 - mileage_highway_road
+    st.sidebar.write(f'Highway fraction: {mileage_highway:.2f}')
+    st.sidebar.write(f'Road fraction: {mileage_road:.2f}')
+    st.sidebar.write(f'City fraction: {mileage_city:.2f}')
+
+    avg_gas_mileage = (gas_mileage_city * mileage_city +
+                       gas_mileage_road * mileage_road +
+                       gas_mileage_highway * mileage_highway)
+    avg_elec_mileage = (elec_mileage_city * mileage_city +
+                        elec_mileage_road * mileage_road +
+                        elec_mileage_highway * mileage_highway)
+    st.sidebar.write(f'Gas mileage: {avg_gas_mileage:.1f}l/100Km')
+    st.sidebar.write(f'Electric mileage: {avg_elec_mileage:.1f}KWh/100Km')
 
 charging_efficiency = st.sidebar.slider('Charging Efficiency (%)', 0, 100, int(charging_efficiency * 100), 1, '%d%%') / 100
 
@@ -142,15 +167,11 @@ if expand:
 # Cost_functions
 
 def km_to_litres(km):
-    return km * 0.01 * (gas_mileage_city * mileage_city +
-                        gas_mileage_road * mileage_road +
-                        gas_mileage_highway * mileage_highway)
+    return km * 0.01 * avg_gas_mileage
 
 
 def km_to_kwh(km):
-    return km * 0.01 * (elec_mileage_city * mileage_city +
-                        elec_mileage_road * mileage_road +
-                        elec_mileage_highway * mileage_highway) / charging_efficiency
+    return km * 0.01 * avg_elec_mileage / charging_efficiency
 
 
 def gas_cost(litres):
